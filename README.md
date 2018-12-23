@@ -25,12 +25,14 @@ Boner 2D is the successor to the popular open source Unity Sprites and Bones add
 * Undo-Support
 * Free and Opensource
 
+Example of Use for 2D Skeletal Animations:
 
-Screenshots: 
-* http://postimg.org/image/r5s36j053
-* http://postimg.org/image/g7dd50agv/
+* https://youtu.be/O3wTx7TSMfA
 
 Forum thread:
+* https://forum.unity.com/threads/release-free-boner2d-2d-skeleton-animation-tools.602521/
+
+Original Forum Thread for Unity Sprites and Bones:
 * http://forum.unity3d.com/threads/219915-Release-Free-Unity-Sprites-And-Bones-2D-skeleton-animation
 
 
