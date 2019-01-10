@@ -1,7 +1,7 @@
 ﻿/*
 The MIT License (MIT)
 
-Copyright (c) 2014 - 2018 Banbury & Play-Em
+Copyright (c) 2014 - 2019 Banbury & Play-Em
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -161,7 +161,7 @@ namespace Boner2D {
 
 		private void EditorUpdate() {
 			if (IK_Enabled) {
-				if (iks != null) {
+				if (bones != null && iks != null) {
 					for (int i = 0; i < iks.Length; i++) {
 						if (iks[i] != null && !editMode 
 						&& iks[i].enabled && iks[i].influence > 0 

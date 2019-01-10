@@ -1,7 +1,7 @@
 ﻿/*
 The MIT License (MIT)
 
-Copyright (c) 2013 - 2017 Banbury & Play-Em
+Copyright (c) 2013 - 2019 Banbury & Play-Em
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -33,24 +33,25 @@ namespace Boner2D {
 		//	This makes it easy to create, name and place unique new ScriptableObject asset files.
 		/// </summary>
 	#if UNITY_EDITOR
-		public static void CreateAsset(Object asset)
-		{
+		public static void CreateAsset(Object asset) {
 			CreateAsset(asset, "/New " + asset.GetType().ToString());
 		}
 
-		public static void CreateAsset(Object asset, string filename)
-		{
-			string path = AssetDatabase.GetAssetPath(Selection.activeObject);
-			if (path == "")
-			{
+		public static void CreateAsset(Object asset, string filename) {
+			string path = (Selection.activeObject != null ? AssetDatabase.GetAssetPath(Selection.activeObject) : "Assets");
+
+			if (string.IsNullOrEmpty(path)) {
 				path = "Assets";
 			}
-			else if (Path.GetExtension(path) != "")
-			{
+			else if (!string.IsNullOrEmpty(Path.GetExtension(path))) {
 				path = path.Replace(Path.GetFileName(AssetDatabase.GetAssetPath(Selection.activeObject)), "");
 			}
 
 			string assetPathAndName = AssetDatabase.GenerateUniqueAssetPath(path + "/" + filename + ".asset");
+
+			if (string.IsNullOrEmpty(assetPathAndName)) {
+				assetPathAndName = "Assets/" + filename + ".asset";
+			}
 
 			AssetDatabase.CreateAsset(asset, assetPathAndName);
 
@@ -60,27 +61,31 @@ namespace Boner2D {
 			Selection.activeObject = asset;
 		}
 
-		public static void CreateAsset<T>() where T : ScriptableObject
-		{
+		public static void CreateAsset<T>() where T : ScriptableObject {
 			T asset = ScriptableObject.CreateInstance<T>();
 
-			string path = AssetDatabase.GetAssetPath(Selection.activeObject);
-			if (path == "")
-			{
+			string path = (Selection.activeObject != null ? AssetDatabase.GetAssetPath(Selection.activeObject) : "Assets");
+
+			if (string.IsNullOrEmpty(path)) {
 				path = "Assets";
 			}
-			else if (Path.GetExtension(path) != "")
-			{
+			else if (!string.IsNullOrEmpty(Path.GetExtension(path))) {
 				path = path.Replace(Path.GetFileName(AssetDatabase.GetAssetPath(Selection.activeObject)), "");
 			}
 
 			string assetPathAndName = AssetDatabase.GenerateUniqueAssetPath(path + "/New " + typeof(T).ToString() + ".asset");
 
+			if (string.IsNullOrEmpty(assetPathAndName)) {
+				assetPathAndName = "Assets/New " + typeof(T).ToString() + ".asset";
+			}
+
 			AssetDatabase.CreateAsset(asset, assetPathAndName);
 
 			AssetDatabase.SaveAssets();
 			AssetDatabase.Refresh();
+
 			EditorUtility.FocusProjectWindow();
+
 			Selection.activeObject = asset;
 		}
 	#endif

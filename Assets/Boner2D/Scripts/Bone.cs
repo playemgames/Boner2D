@@ -1,7 +1,7 @@
 ﻿/*
 The MIT License (MIT)
 
-Copyright (c) 2014 - 2018 Banbury & Play-Em
+Copyright (c) 2014 - 2019 Banbury & Play-Em
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -344,7 +344,7 @@ namespace Boner2D {
 		// Update is called once per frame
 		void Update () {
 			if (!Application.isPlaying) {
-				if (Application.isEditor && editMode && snapToParent && parent != null) {
+				if (Application.isEditor && snapToParent && parent != null) {
 					gameObject.transform.position = parent.Head;
 				}
 			}

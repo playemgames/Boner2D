@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2014 - 2018 Play-Em
+Copyright (c) 2014 - 2019 Play-Em
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,6 @@ THE SOFTWARE.
 */
 
 using UnityEngine;
-#if UNITY_EDITOR
 using UnityEditor;
 using System.IO;
 using System.Collections;
@@ -133,15 +132,11 @@ namespace Boner2D {
 
 		private void DisableSkeletonsIK(){
 			foreach (Skeleton s in Poses.Keys) {
-				#if UNITY_EDITOR
 				Undo.RecordObject(s, "Disable IK");
-				#endif
 
 				s.IK_Enabled = false;
 
-				#if UNITY_EDITOR
 				EditorUtility.SetDirty (s);
-				#endif
 
 				Debug.Log("Disabled IK for " + s.name);
 			}
@@ -149,15 +144,11 @@ namespace Boner2D {
 
 		private void EnableSkeletonsIK(){
 			foreach (Skeleton s in Poses.Keys) {
-				#if UNITY_EDITOR
 				Undo.RecordObject(s, "Disable IK");
-				#endif
 
 				s.IK_Enabled = true;
 
-				#if UNITY_EDITOR
 				EditorUtility.SetDirty (s);
-				#endif
 
 				Debug.Log("Enabled IK for " + s.name);
 			}
@@ -168,15 +159,11 @@ namespace Boner2D {
 				bool isIK = s.IK_Enabled; 
 				s.IK_Enabled = false;
 
-				#if UNITY_EDITOR
 				Undo.RecordObject(s, "Apply Pose");
-				#endif
 
 				s.RestorePose((Pose)Poses[s]);
 
-				#if UNITY_EDITOR
 				EditorUtility.SetDirty (s);
-				#endif
 
 				s.IK_Enabled = isIK;
 
@@ -185,19 +172,21 @@ namespace Boner2D {
 		}
 
 		private void SavePoses(){
-			if(!Directory.Exists("Assets/Poses")) {
+			if (!Directory.Exists("Assets/Poses")) {
 				AssetDatabase.CreateFolder("Assets", "Poses");
 				AssetDatabase.Refresh();
 			}
 
 			foreach (Skeleton s in Poses.Keys) {
-				#if UNITY_EDITOR
-				ScriptableObjectUtility.CreateAsset((Pose)Poses[s], "Poses/" + s.name + " Pose");
-				#endif
+				if ((Pose)Poses[s] == null) {
+					Debug.LogError("No Pose exists for " + s.name);
+				}
+				else {
+					ScriptableObjectUtility.CreateAsset((Pose)Poses[s], "Poses/" + s.name + " Pose");
+				}
 
 				Debug.Log("Saved Baked Poses for " + s.name);
 			}
 		}
 	}
-	#endif
 }
