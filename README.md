@@ -16,7 +16,7 @@ Boner 2D is the successor to the popular open source Unity Sprites and Bones add
 * Flip Skeletons and Bones on X or Y Axis at the push of a button.
 * Mesh creation for Skinnable Meshes using custom mesh creation tools.  Meshes are saved as assets.
 * Free Form Deformation using control points.
-* Shaders that support shadows and z-zorting (can be customized per Skeleton).
+* Shaders that support shadows and z-sorting (can be customized per Skeleton).
 * Scaling of root object of Skeleton.
 * Saving and loading of poses. Poses are saved as assets.
 * Helper tools to sort render layers, copy positions and rotations between objects, and create materials for renderers.
