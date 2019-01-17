@@ -725,9 +725,6 @@ namespace Boner2D {
 					propertyBlock.SetColor(spriteColor, color);
 					skins[i].SetPropertyBlock(propertyBlock);
 				}
-				else {
-					Debug.Log(skins[i].name + " has no material.");
-				}
 			}
 
 			// Find all SpriteRenderer elements
