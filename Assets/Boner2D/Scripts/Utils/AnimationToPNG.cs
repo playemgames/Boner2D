@@ -7,7 +7,7 @@ using System.IO;
 /*
 The MIT License (MIT)
 
-Copyright (c) 2014 Brad Nelson and Play-Em Inc.
+Copyright (c) 2014 - 2019 Brad Nelson and Play-Em Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -88,7 +88,7 @@ public class AnimationToPNG : MonoBehaviour {
 	public float pixelsToWorldUnit = 74.48275862068966f;
 
 	// If you have Unity Pro you can use a RenderTexture which will render the full camera width, otherwise it will only render half
-	private bool useRenderTexture = false;
+	public bool useRenderTexture = true;
 
 	private int videoframe = 0; // how many frames we've rendered
 
@@ -113,7 +113,7 @@ public class AnimationToPNG : MonoBehaviour {
 	private RenderTexture whiteCamRenderTexture; // white camera render texure
 
 	public void Start () {
-	    useRenderTexture = Application.HasProLicense();
+	    // useRenderTexture = Application.HasProLicense();
 
 		// Set the playback framerate!
 		// (real time doesn't influence time anymore)
@@ -121,11 +121,14 @@ public class AnimationToPNG : MonoBehaviour {
 
 		// Create a folder that doesn't exist yet. Append number if necessary.
 		realFolder = folder;
+
 		int count = 1;
+
 		while (Directory.Exists(realFolder)) {
 			realFolder = folder + count;
 			count++;
 		}
+
 		// Create the folder
 		Directory.CreateDirectory(realFolder);  
 
@@ -138,6 +141,7 @@ public class AnimationToPNG : MonoBehaviour {
         bc.transform.localPosition = new Vector3(0, 0, -1);
 	    blackCam = bc.AddComponent<Camera>();
 	    blackCam.backgroundColor = Color.black;
+		blackCam.clearFlags = CameraClearFlags.SolidColor;
 		blackCam.orthographic = true;
 		blackCam.orthographicSize = cameraSize;
 	    blackCam.tag = "MainCamera";
@@ -146,6 +150,7 @@ public class AnimationToPNG : MonoBehaviour {
         wc.transform.localPosition = new Vector3(0, 0, -1);
         whiteCam = wc.AddComponent<Camera>();
         whiteCam.backgroundColor = Color.white;
+		whiteCam.clearFlags = CameraClearFlags.SolidColor;
         whiteCam.orthographic = true;
 		whiteCam.orthographicSize = cameraSize;
 
@@ -156,13 +161,19 @@ public class AnimationToPNG : MonoBehaviour {
 
 			whiteCam.rect = new Rect(0.5f, 0.0f, 0.5f, 1.0f);
 		}
+		else {
+			blackCam.forceIntoRenderTexture = true;
+
+			whiteCam.forceIntoRenderTexture = true;
+		}
+
 		// Cameras are set ready to capture!
 		readyToCapture = true;
 	}
 
 	void Update() {
 		// If the capturing is not done and the cameras are set, then Capture the animation
-		if(!done && readyToCapture){
+		if (!done && readyToCapture){
 			StartCoroutine(Capture());
 		}
 	}
@@ -188,31 +199,37 @@ public class AnimationToPNG : MonoBehaviour {
 	}
 
 	IEnumerator Capture () {
-		if(videoframe < framesToCapture) {
+		if (videoframe < framesToCapture) {
 			// name is "realFolder/animationName0000.png"
 			// string name = realFolder + "/" + animationName + Time.frameCount.ToString("0000") + ".png";
 			string filename = String.Format("{0}/" + animationName + "{1:D04}.png", realFolder, Time.frameCount);
 
 			// Stop time
 			Time.timeScale = 0;
+
 			// Yield to next frame and then start the rendering
 			yield return new WaitForEndOfFrame();
 
 			// If we are using a render texture to make the animation frames then set up the camera render textures
 			if (useRenderTexture){
 				//Initialize and render textures
- 				blackCamRenderTexture = new RenderTexture(Screen.width,Screen.height,24, RenderTextureFormat.ARGB32);
-				whiteCamRenderTexture = new RenderTexture(Screen.width,Screen.height,24, RenderTextureFormat.ARGB32);
+ 				blackCamRenderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
+
+				whiteCamRenderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
  
 				blackCam.targetTexture = blackCamRenderTexture;
 				blackCam.Render();
+
 				RenderTexture.active = blackCamRenderTexture;
+
 				texb = GetTex2D(true);
  
 				//Now do it for Alpha Camera
 				whiteCam.targetTexture = whiteCamRenderTexture;
 				whiteCam.Render();
+
 				RenderTexture.active = whiteCamRenderTexture;
+
 				texw = GetTex2D(true);
 			}
 			// If not using render textures then simply get the images from both cameras
@@ -234,39 +251,48 @@ public class AnimationToPNG : MonoBehaviour {
 				if (!useRenderTexture){
 					width = width / 2;
 				}
+
 				outputtex = new Texture2D(width, height, TextureFormat.ARGB32, false);
 
 				// Create Alpha from the difference between black and white camera renders
 				for (int y = 0; y < outputtex.height; ++y) { // each row
 					for (int x = 0; x < outputtex.width; ++x) { // each column
 						float alpha;
+
 						if (useRenderTexture){
 							alpha = texw.GetPixel(x, y).r - texb.GetPixel(x, y).r;
 						}
 						else {
 							alpha = texb.GetPixel(x + width, y).r - texb.GetPixel(x, y).r;
 						}
+
 						alpha = 1.0f - alpha;
+
 						Color color;
-						if(alpha == 0) {
+
+						if (alpha == 0) {
 							color = Color.clear;
 						} 
 						else {
 							color = texb.GetPixel(x, y) / alpha;
 						}
+
 						color.a = alpha;
+
 						outputtex.SetPixel(x, y, color);
 					}
 				}
 
 				// Encode the resulting output texture to a byte array then write to the file
 				byte[] pngShot = outputtex.EncodeToPNG();
+
 				#if !UNITY_WEBPLAYER
 				File.WriteAllBytes(filename, pngShot);
 				#endif
 
 				// Reset the time scale, then move on to the next frame.
 				Time.timeScale = originaltimescaleTime;
+
 				videoframe++;
 			}
 
@@ -274,6 +300,7 @@ public class AnimationToPNG : MonoBehaviour {
 		}
 		else {
 			Debug.Log("Complete! " + videoframe + " videoframes rendered (0 indexed)");
+
 			done = true;
 		}
 	}
@@ -283,14 +310,17 @@ public class AnimationToPNG : MonoBehaviour {
         // Create a texture the size of the screen, RGB24 format
         int width = Screen.width;
         int height = Screen.height;
+
         if (!renderAll) {
             width = width / 2;
         }
 
         Texture2D tex = new Texture2D(width, height, TextureFormat.ARGB32, false);
+
         // Read screen contents into the texture
         tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
         tex.Apply();
+
         return tex;
     }
 }
