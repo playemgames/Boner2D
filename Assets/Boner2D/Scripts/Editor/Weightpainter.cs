@@ -32,6 +32,7 @@ namespace Boner2D {
 		Add, Subtract
 	}
 
+	[InitializeOnLoad]
 	public class Weightpainter : EditorWindow {
 		public SkinnedMeshRenderer skin;
 		static public bool isPainting = false;
@@ -60,6 +61,8 @@ namespace Boner2D {
 		private Color[] colors;
 		private float value;
 
+		private Material mat;
+
 		[MenuItem("Boner2D/Weight painting")]
 		protected static void ShowWeightpainterWindow() {
 			var wnd = GetWindow<Weightpainter>();
@@ -73,13 +76,13 @@ namespace Boner2D {
 				}
 			}
 
-			SceneView.onSceneGUIDelegate += wnd.OnSceneGUI;
+			SceneView.duringSceneGui += wnd.OnSceneGUI;
 			wnd.Show();
 		}
 
 		public void OnDestroy() {
 			isPainting = false;
-			SceneView.onSceneGUIDelegate -= OnSceneGUI;
+			SceneView.duringSceneGui -= OnSceneGUI;
 		}
 
 		public void OnGUI() {
@@ -198,6 +201,12 @@ namespace Boner2D {
 
 				Event current = Event.current;
 
+				if (mat == null) {
+					mat = new Material(Shader.Find("Lines/Colored Blended"));
+				}
+
+				mat.SetPass(0);
+
 				Graphics.DrawMeshNow(mesh, skin.transform.localToWorldMatrix);
 
 				for (int b = 0; b < bones.Length; b++) {
@@ -264,8 +273,8 @@ namespace Boner2D {
 			}
 		}
 
-		private void CalculateVertexColors(Transform[] bones, Bone bone) {
-			if (mesh == null) {
+		private void CalculateVertexColors(Transform[] bones, Bone bone) { 
+			if (mesh == null) { 
 				return;
 			}
 

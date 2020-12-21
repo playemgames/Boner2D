@@ -42,9 +42,11 @@ namespace Boner2D {
 		public bool showBoneInfluence = true;
 		public bool IK_Enabled = true;
 
+		#if UNITY_EDITOR
 		public Pose basePose;
 
 		private Pose tempPose;
+		#endif
 
 		[SerializeField] 
 		[HideInInspector]
@@ -497,10 +499,12 @@ namespace Boner2D {
 			return cpIndex;
 		}
 
+		#if UNITY_EDITOR
 		// Set the base pose for the Skeleton
 		public void SetBasePose(Pose pose) {
 			basePose = pose;
 		}
+		#endif
 
 		// Set the Edit mode to manipulate the bones and IK
 		public void SetEditMode(bool edit) {
@@ -985,7 +989,9 @@ namespace Boner2D {
 			|| (int)transform.localEulerAngles.x == 180 && (int)transform.localEulerAngles.y == 0) {
 				normal = 1;
 
+				#if UNITY_EDITOR
 				Debug.Log("Changing normals for " + name);
+				#endif
 			}
 
 			ChangeRendererNormals(normal);
@@ -994,9 +1000,10 @@ namespace Boner2D {
 
 	#if UNITY_EDITOR
 		void OnEnable() {
-			EditorApplication.update += EditorUpdate;
 
-			if (!Application.isPlaying) {
+			if (!Application.isPlaying) { 
+				EditorApplication.update += EditorUpdate;
+
 				// Default normal value
 				int normal = -1;
 
@@ -1009,26 +1016,32 @@ namespace Boner2D {
 
 				ChangeRendererNormals(normal);
 			}
+			else {
+				basePose = null;
+			}
 		}
 
 		void OnDisable() {
-			EditorApplication.update -= EditorUpdate;
 
 			// Sets the skins to use reference mesh on disable
-			if (!Application.isPlaying && skin2Ds != null && recordMode) {
+			if (!Application.isPlaying) {
+				EditorApplication.update -= EditorUpdate;
+
 				skin2Ds = gameObject.GetComponentsInChildren<Skin2D>(true);
 
-				for (int i = 0; i < skin2Ds.Length; i++) {
-					skin2Ds[i].AssignReferenceMesh();
+				if (skin2Ds != null && recordMode) {
+					for (int i = 0; i < skin2Ds.Length; i++) {
+						skin2Ds[i].AssignReferenceMesh();
 
-					if (skin2Ds[i].skinnedMeshRenderer.sharedMesh != null 
-					&& skin2Ds[i].referenceMesh != null 
-					&& skin2Ds[i].skinnedMeshRenderer.sharedMesh != skin2Ds[i].referenceMesh) {
-						skin2Ds[i].skinnedMeshRenderer.sharedMesh = skin2Ds[i].referenceMesh;
+						if (skin2Ds[i].skinnedMeshRenderer.sharedMesh != null 
+						&& skin2Ds[i].referenceMesh != null 
+						&& skin2Ds[i].skinnedMeshRenderer.sharedMesh != skin2Ds[i].referenceMesh) {
+							skin2Ds[i].skinnedMeshRenderer.sharedMesh = skin2Ds[i].referenceMesh;
+						}
 					}
-				}
 
-				Debug.Log("Reassigned Meshes for skins for " + name);
+					Debug.Log("Reassigned Meshes for skins for " + name);
+				}
 			}
 		}
 

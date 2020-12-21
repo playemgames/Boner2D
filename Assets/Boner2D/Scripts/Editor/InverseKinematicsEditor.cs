@@ -49,7 +49,7 @@ namespace Boner2D {
 		static private Vector3 toChild;
 
 		static InverseKinematicsEditor() {
-			SceneView.onSceneGUIDelegate += OnScene;
+			SceneView.duringSceneGui += OnScene;
 		}
 
 		void OnEnable() {

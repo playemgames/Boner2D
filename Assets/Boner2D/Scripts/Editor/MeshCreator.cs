@@ -34,7 +34,7 @@ using System.IO;
 #endif
 
 namespace Boner2D {
-	[ExecuteInEditMode]
+	[ExecuteInEditMode, InitializeOnLoad]
 	public class MeshCreator : EditorWindow {
 		private SpriteRenderer spriteRenderer;
 
@@ -95,7 +95,8 @@ namespace Boner2D {
 
 			wnd.Show();
 			wnd.wantsMouseMove = true;
-			SceneView.onSceneGUIDelegate += wnd.OnSceneGUI;
+
+			SceneView.duringSceneGui += wnd.OnSceneGUI;
 		}
 		#endif
 
@@ -245,7 +246,8 @@ namespace Boner2D {
 
 		public void OnDestroy() {
 			#if UNITY_EDITOR
-			SceneView.onSceneGUIDelegate -= OnSceneGUI;
+			SceneView.duringSceneGui -= OnSceneGUI;
+
 			DestroyPreviewObject();
 			#endif
 		}
