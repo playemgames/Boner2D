@@ -161,11 +161,11 @@ namespace Boner2D {
 			Undo.CollapseUndoOperations (Undo.GetCurrentGroup ());
 		}
 
-		private void EditorUpdate() {
+		private void IKUpdate() {
 			if (IK_Enabled) {
 				if (bones != null && iks != null) {
 					for (int i = 0; i < iks.Length; i++) {
-						if (iks[i] != null && !editMode 
+						if (!editMode && iks[i] != null 
 						&& iks[i].enabled && iks[i].influence > 0 
 						&& iks[i].gameObject.activeInHierarchy) {
 							iks[i].ResolveSK2D();
@@ -1002,8 +1002,6 @@ namespace Boner2D {
 		void OnEnable() {
 
 			if (!Application.isPlaying) { 
-				EditorApplication.update += EditorUpdate;
-
 				// Default normal value
 				int normal = -1;
 
@@ -1025,8 +1023,6 @@ namespace Boner2D {
 
 			// Sets the skins to use reference mesh on disable
 			if (!Application.isPlaying) {
-				EditorApplication.update -= EditorUpdate;
-
 				skin2Ds = gameObject.GetComponentsInChildren<Skin2D>(true);
 
 				if (skin2Ds != null && recordMode) {
@@ -1083,5 +1079,9 @@ namespace Boner2D {
 			}
 		}
 	#endif
+
+		void LateUpdate() {
+			IKUpdate();
+		}
 	}
 }
