@@ -43,7 +43,8 @@ namespace Boner2D {
 			if (fixRot 
 			&& modified == AnimationUtility.CurveModifiedType.CurveModified 
 			&& binding.type == typeof(Transform) 
-			&& binding.propertyName.Contains("localEulerAnglesRaw")) {
+			&& binding.propertyName.Contains("localEulerAnglesRaw")
+			&& AnimWindowModified.rootGameObject != null) {
 				Transform transform = AnimWindowModified.rootGameObject.transform.Find(binding.path);
 				Vector3 eulerAngles = LocalEulerAngleHint.GetLocalEulerAngles(transform);
 

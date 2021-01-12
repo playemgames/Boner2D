@@ -618,6 +618,36 @@ namespace Boner2D {
 		}
 	#endif
 
+		public void UpdateControlPoints() {
+			count = controlPoints.Length;
+
+			if (vertices == null || vertices.Count != _skinnedMeshRenderer.sharedMesh.vertexCount) {
+				vertices.Clear();
+				_skinnedMeshRenderer.sharedMesh.GetVertices(vertices);
+			}
+			else {
+				_skinnedMeshRenderer.sharedMesh.GetVertices(vertices);
+			}
+
+			updateControlPoints = false;
+
+			for (c = 0; c < count; c++) {
+				if (!updateControlPoints) {
+					if (vertices[c] != points.GetPoint(controlPoints[c])) {
+						updateControlPoints = true;
+					}
+				}
+
+				if (updateControlPoints) {
+					vertices[c] = points.GetPoint(controlPoints[c]);
+				}
+			}
+
+			if (updateControlPoints) {
+				_skinnedMeshRenderer.sharedMesh.SetVertices(vertices);
+			}
+		}
+
 		void OnEnable() {
 			// Only skin up to 2 bones, more than this messes up the skinning.
 			if (skinnedMeshRenderer != null) {
@@ -720,33 +750,7 @@ namespace Boner2D {
 			}
 
 			if (!_editingPoints && controlPoints.Length > 0) {
-				count = controlPoints.Length;
-
-				if (vertices == null || vertices.Count != _skinnedMeshRenderer.sharedMesh.vertexCount) {
-					vertices.Clear();
-					_skinnedMeshRenderer.sharedMesh.GetVertices(vertices);
-				}
-				else {
-					_skinnedMeshRenderer.sharedMesh.GetVertices(vertices);
-				}
-
-				updateControlPoints = false;
-
-				for (c = 0; c < count; c++) {
-					if (!updateControlPoints) {
-						if (vertices[c] != points.GetPoint(controlPoints[c])) {
-							updateControlPoints = true;
-						}
-					}
-
-					if (updateControlPoints) {
-						vertices[c] = points.GetPoint(controlPoints[c]);
-					}
-				}
-
-				if (updateControlPoints) {
-					_skinnedMeshRenderer.sharedMesh.SetVertices(vertices);
-				}
+				UpdateControlPoints();
 			}
 		}
 

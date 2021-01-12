@@ -60,6 +60,11 @@ namespace Boner2D {
 
 		private Event e;
 
+		private Ray r;
+		private Vector2 mousePos;
+
+		private float selectDistance;
+
 		void OnEnable() {
 			skin = (Skin2D)target;
 			skinnedMeshRenderer = skin.GetComponent<SkinnedMeshRenderer>();
@@ -138,12 +143,13 @@ namespace Boner2D {
 			if (skin.skinnedMeshRenderer.sharedMesh != null && GUILayout.Button("Generate Mesh Asset")) {
 				#if UNITY_EDITOR
 				// Check if the Meshes directory exists, if not, create it.
-				if(!Directory.Exists("Assets/Meshes")) {
+				if (!Directory.Exists("Assets/Meshes")) {
 					AssetDatabase.CreateFolder("Assets", "Meshes");
 					AssetDatabase.Refresh();
 				}
 				Mesh mesh = skin.skinnedMeshRenderer.sharedMesh.Clone();
 				mesh.name = skin.skinnedMeshRenderer.sharedMesh.name.Replace(".SkinnedMesh", ".Mesh");
+
 				ScriptableObjectUtility.CreateAsset(mesh, "Meshes/" + skin.gameObject.name + ".Mesh");
 				#endif
 			}
@@ -154,12 +160,16 @@ namespace Boner2D {
 				#if UNITY_EDITOR
 				Material material = new Material(skin.skinnedMeshRenderer.sharedMaterial);
 				material.CopyPropertiesFromMaterial(skin.skinnedMeshRenderer.sharedMaterial);
+
 				skin.skinnedMeshRenderer.sharedMaterial = material;
-				if(!Directory.Exists("Assets/Materials")) {
+
+				if (!Directory.Exists("Assets/Materials")) {
 					AssetDatabase.CreateFolder("Assets", "Materials");
 					AssetDatabase.Refresh();
 				}
+
 				AssetDatabase.CreateAsset(material, "Assets/Materials/" + material.mainTexture.name + ".mat");
+
 				Debug.Log("Created material " + material.mainTexture.name + " for " + skin.gameObject.name);
 				#endif
 			}
@@ -171,6 +181,7 @@ namespace Boner2D {
 				if (skin != null) {
 					skin.editingPoints = false;
 				}
+
 				return;
 			}
 
@@ -181,19 +192,10 @@ namespace Boner2D {
 
 				EditorGUI.BeginChangeCheck();
 
-				Ray r = HandleUtility.GUIPointToWorldRay(e.mousePosition);
-				Vector2 mousePos = r.origin;
+				r = HandleUtility.GUIPointToWorldRay(e.mousePosition);
+				mousePos = r.origin;
 
-				float selectDistance = HandleUtility.GetHandleSize(mousePos) * baseSelectDistance;
-				if (e.type == EventType.MouseDrag && e.button == 0 && e.isMouse) {
-					skin.editingPoints = true;
-				}
-				else if (e.type == EventType.MouseUp || vertices.Count != skinnedMeshRenderer.sharedMesh.vertexCount) {
-					skin.editingPoints = false;
-				}
-
-				#region Draw vertex handles
-				Handles.color = handleColor;
+				selectDistance = HandleUtility.GetHandleSize(mousePos) * baseSelectDistance;
 
 				// Create the vertices here for the handle points
 				if (!skin.editingPoints) {
@@ -220,7 +222,25 @@ namespace Boner2D {
 					// Always clear vertices before getting new ones
 					newVertices.Clear();
 					skinnedMeshRenderer.sharedMesh.GetVertices(newVertices);
+
+					// Debug.Log("Created new baked mesh.");
 				}
+
+				if (e.type == EventType.MouseDrag && e.button == 0 && e.isMouse) { 
+					/*if (!skin.editingPoints) {
+						Debug.Log("Started editing points");
+					}*/
+
+					skin.editingPoints = true;
+				}
+				else if (e.type == EventType.MouseUp || vertices.Count != skinnedMeshRenderer.sharedMesh.vertexCount) {
+					skin.editingPoints = false;
+
+					// Debug.Log("Stopped editing points");
+				}
+
+				#region Draw vertex handles
+				Handles.color = handleColor;
 
 				for (int i = 0; i < skin.controlPoints.Length; i++) {
 					if (Handles.Button(vertices[i], Quaternion.identity, selectDistance, selectDistance, Handles.CircleHandleCap)) {
@@ -231,8 +251,8 @@ namespace Boner2D {
 						EditorGUI.BeginChangeCheck();
 
 						// If we are editing points then the position handle drives the vertex
-						if (skin.editingPoints) {
-							vertices[i] = Handles.DoPositionHandle(vertices[i], Quaternion.identity);
+						if (skin.editingPoints) { 
+							vertices[i] = Handles.PositionHandle(vertices[i], Quaternion.identity);
 
 							// Need to create matrices based on the skin's bones
 							for (int b = 0; b < boneMatrices.Length; b++) {
@@ -253,14 +273,14 @@ namespace Boner2D {
 							}
 
 							// DEBUG HERE TO CHECK FOR DISCREPANCIES //
-							/*newVert = vertexMatrix.MultiplyPoint(skinnedMesh.vertices[i]);
+							/*Vector3 debugVert = vertexMatrix.MultiplyPoint(skinnedMesh.vertices[i]);
 
-							Debug.Log("New Vertex: " + newVert.x + ", " + newVert.y + ", " + newVert.z);
+							Debug.Log("New Vertex: " + debugVert.x + ", " + debugVert.y + ", " + debugVert.z);
 							Debug.Log("Original Vertex: " + vertices[i].x + ", " + vertices[i].y + ", " + vertices[i].z);
 
 							Handles.DotHandleCap(
-								0,
-								newVert,
+								i,
+								debugVert,
 								Quaternion.identity,
 								selectDistance,
 								EventType.Repaint
@@ -270,11 +290,10 @@ namespace Boner2D {
 							newVert = vertexMatrix.inverse.MultiplyPoint(vertices[i]);
 
 							skin.controlPoints[i].position = newVert;
+							skin.points.SetPoint(skin.controlPoints[i]);
+							newVertices[i] = skin.points.GetPoint(skin.controlPoints[i]);
 
 							if (EditorGUI.EndChangeCheck()) {
-								skin.points.SetPoint(skin.controlPoints[i]);
-								newVertices[i] = skin.controlPoints[i].position;
-
 								Undo.RecordObject(skin, "Changed Control Point");
 								Undo.RecordObject(skin.points, "Changed Control Point");
 
@@ -285,18 +304,25 @@ namespace Boner2D {
 							// If we are not editing points then just use the world space offset for the position handle
 							offset = vertices[i] - skin.transform.TransformPoint(skin.points.GetPoint(skin.controlPoints[i]));
 
-							vertices[i] = Handles.DoPositionHandle(skin.transform.TransformPoint(skin.points.GetPoint(skin.controlPoints[i])) + offset, Quaternion.identity);
+							vertices[i] = Handles.PositionHandle(skin.transform.TransformPoint(skin.points.GetPoint(skin.controlPoints[i])) + offset, Quaternion.identity);
+
+							// Debug.Log("Not editing points.");
 						}
 					}
 				}
 
 				if (skin.editingPoints) {
 					skinnedMeshRenderer.sharedMesh.SetVertices(newVertices);
+
+					skin.UpdateControlPoints();
+
+					// Debug.Log("Set new vertices");
 				}
 				#endregion
 			}
-
-			skin.editingPoints = false;
+			else {
+				skin.editingPoints = false;
+			}
 		}
 	}
 }
