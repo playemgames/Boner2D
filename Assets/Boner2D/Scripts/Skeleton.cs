@@ -114,9 +114,11 @@ namespace Boner2D {
 		private Bone[] _bones = null;
 		public Bone[] bones {
 			get {
-				if (_bones == null || _bones != null && _bones.Length <= 0 || Application.isEditor && !Application.isPlaying){
-					_bones = gameObject.GetComponentsInChildren<Bone>(true);
-					iks = gameObject.GetComponentsInChildren<InverseKinematics>(true);
+				if (!Application.isPlaying) { 
+					if (_bones == null || _bones != null && _bones.Length <= 0 || Application.isEditor){
+						_bones = gameObject.GetComponentsInChildren<Bone>(true);
+						iks = gameObject.GetComponentsInChildren<InverseKinematics>(true);
+					}
 				}
 
 				return _bones;
@@ -1016,6 +1018,13 @@ namespace Boner2D {
 			}
 			else {
 				basePose = null;
+
+				if (IK_Enabled) {
+					if (_bones == null){
+						_bones = gameObject.GetComponentsInChildren<Bone>(true);
+						iks = gameObject.GetComponentsInChildren<InverseKinematics>(true);
+					}
+				}
 			}
 		}
 

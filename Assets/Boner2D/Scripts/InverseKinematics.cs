@@ -63,7 +63,7 @@ namespace Boner2D {
 			}
 		}
 
-		public int iterations = 20;
+		public int iterations = 5;
 
 		[Range(0.01f, 1)]
 		public float damping = 1;
@@ -96,6 +96,8 @@ namespace Boner2D {
 		private Vector3 rootPos;
 		private Vector3 root2tip;
 		private Vector3 root2target;
+		private Vector3 dir;
+		private Vector3 targetPos;
 
 		private float angle;
 		private float yAngle;
@@ -103,6 +105,9 @@ namespace Boner2D {
 
 		private float newAngle;
 		private float sign;
+
+		private Quaternion newRotation;
+		private Quaternion boneRotation;
 
 		void Start() {
 			// Cache optimization
@@ -141,9 +146,14 @@ namespace Boner2D {
 		 * http://gmc.yoyogames.com/index.php?showtopic=462301
 		 * Angle Limit code adapted from Veli-Pekka Kokkonen's SimpleCCD http://goo.gl/6oSzDx
 		 **/
-		public void ResolveSK2D() {
+		public void ResolveSK2D() { 
+			if (target != null) {
+				targetPos = target.transform.position;
+			}
+
 			for (int it = 0; it < iterations; it++) {
 				i = _chainLength;
+
 				boneTransform = transform;
 
 				while (--i >= 0 && boneTransform != null) {
@@ -151,7 +161,7 @@ namespace Boner2D {
 
 					// Z position can be different than 0
 					root2tip = (bone.Head - rootPos);
-					root2target = (((target != null) ? target.transform.position : bone.Head) - rootPos);
+					root2target = (((target != null) ? targetPos : bone.Head) - rootPos);
 
 					// Calculate how much we should rotate to get to the target
 					angle = SignedAngle(root2tip, root2target, boneTransform);
@@ -171,15 +181,17 @@ namespace Boner2D {
 					angle *= damping;
 
 					// Wanted angle for rotation
-					angle = -(angle - boneTransform.localRotation.eulerAngles.z);
+					boneRotation = boneTransform.localRotation;
 
-					if(nodeCache != null && nodeCache.ContainsKey(boneTransform)) {
+					angle = -(angle - boneRotation.eulerAngles.z);
+
+					if (nodeCache != null && nodeCache.ContainsKey(boneTransform)) {
 						// Clamp angle in local space
 						var node = nodeCache[boneTransform];
 						angle = ClampAngle(angle, node.from, node.to);
 					}
 
-					Quaternion newRotation = Quaternion.Euler(boneTransform.localRotation.eulerAngles.x, boneTransform.localRotation.eulerAngles.y, angle);
+					newRotation = Quaternion.Euler(boneRotation.eulerAngles.x, boneRotation.eulerAngles.y, angle);
 
 					if (!IsNaNRot(newRotation)) {
 						boneTransform.localRotation = newRotation;
@@ -194,7 +206,7 @@ namespace Boner2D {
 			newAngle = Vector3.Angle (a, b);
 
 			// Use skeleton as root, change dir if the rotation is flipped
-			Vector3 dir = (bone.skeleton != null && bone.skeleton.transform.localRotation.eulerAngles.y == 180.0f && bone.skeleton.transform.localRotation.eulerAngles.x == 0.0f) ? Vector3.forward : Vector3.back;
+			dir = (bone.skeleton != null && bone.skeleton.transform.localRotation.eulerAngles.y == 180.0f && bone.skeleton.transform.localRotation.eulerAngles.x == 0.0f) ? Vector3.forward : Vector3.back;
 
 			sign = Mathf.Sign (Vector3.Dot (dir, Vector3.Cross (a, b)));
 
