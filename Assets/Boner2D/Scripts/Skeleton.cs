@@ -145,6 +145,23 @@ namespace Boner2D {
 		// Enable if you want verbose Debug Logs
 		public bool verboseLogs = false;
 
+
+	/// METHODS ///
+
+		private void IKUpdate() {
+			if (IK_Enabled) {
+				if (bones != null && iks != null) {
+					for (int i = 0; i < iks.Length; i++) {
+						if (!editMode && iks[i] != null 
+						&& iks[i].enabled && iks[i].influence > 0 
+						&& iks[i].gameObject.activeInHierarchy) {
+							iks[i].ResolveSK2D();
+						}
+					}
+				}
+			}
+		}
+
 	#if UNITY_EDITOR
 		[MenuItem("Boner2D/Skeleton")]
 		public static void Create() {
@@ -161,20 +178,6 @@ namespace Boner2D {
 			b.transform.parent = o.transform;
 
 			Undo.CollapseUndoOperations (Undo.GetCurrentGroup ());
-		}
-
-		private void IKUpdate() {
-			if (IK_Enabled) {
-				if (bones != null && iks != null) {
-					for (int i = 0; i < iks.Length; i++) {
-						if (!editMode && iks[i] != null 
-						&& iks[i].enabled && iks[i].influence > 0 
-						&& iks[i].gameObject.activeInHierarchy) {
-							iks[i].ResolveSK2D();
-						}
-					}
-				}
-			}
 		}
 
 		// Create a pose, include disabled objects or not
@@ -926,6 +929,9 @@ namespace Boner2D {
 				}
 			}
 		}
+
+
+	/// UNITY METHODS ///
 
 		// Use this for initialization
 		void Start () {
