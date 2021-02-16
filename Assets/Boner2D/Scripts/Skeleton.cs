@@ -1006,7 +1006,7 @@ namespace Boner2D {
 
 		}
 
-	#if UNITY_EDITOR
+
 		void OnEnable() {
 
 			if (!Application.isPlaying) { 
@@ -1034,8 +1034,9 @@ namespace Boner2D {
 			}
 		}
 
-		void OnDisable() {
 
+	#if UNITY_EDITOR
+		void OnDisable() {
 			// Sets the skins to use reference mesh on disable
 			if (!Application.isPlaying) {
 				skin2Ds = gameObject.GetComponentsInChildren<Skin2D>(true);
