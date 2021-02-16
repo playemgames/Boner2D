@@ -1023,7 +1023,9 @@ namespace Boner2D {
 				ChangeRendererNormals(normal);
 			}
 			else {
+				#if UNITY_EDITOR
 				basePose = null;
+				#endif
 
 				if (IK_Enabled) {
 					if (_bones == null){
