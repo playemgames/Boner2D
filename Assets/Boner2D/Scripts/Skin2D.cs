@@ -39,9 +39,11 @@ namespace Boner2D {
 		// The sprite reference for the Skin2D
 		public Sprite sprite;
 
+		#if UNITY_EDITOR
 		// The bone weights assigned to the Skin2D
 		[HideInInspector]
 		public Bone2DWeights boneWeights;
+		#endif
 
 		// Material for generating mesh lines for debugging
 		private Material lineMaterial;
