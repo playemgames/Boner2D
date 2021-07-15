@@ -1,7 +1,7 @@
 ﻿/*
 The MIT License (MIT)
 
-Copyright (c) 2014 - 2018 Banbury & Play-Em
+Copyright (c) 2014 - 2021 Banbury & Play-Em
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,9 @@ THE SOFTWARE.
 */
 
 using UnityEngine;
+#if UNITY_2019_1_OR_NEWER
+using Unity.Collections;
+#endif
 
 namespace Boner2D {
 	static public class Utils {
@@ -104,6 +107,9 @@ namespace Boner2D {
 			copy.uv = m.uv;
 			copy.uv2 = m.uv2;
 			copy.boneWeights = m.boneWeights;
+			#if UNITY_2019_1_OR_NEWER
+			copy.ConvertToBoneWeight1();
+			#endif
 			copy.tangents = m.tangents;
 
 			return copy;
@@ -122,5 +128,81 @@ namespace Boner2D {
 
 			return ret;
 		}
+
+		#if UNITY_2019_1_OR_NEWER
+		// Convert the mesh's bone weights to BoneWeight1 structs since it is broken in builds since SkinQuality is ignored
+
+		static public void ConvertToBoneWeight1(this Mesh mesh) { 
+			if (mesh == null) {
+				return;
+			}
+
+			// Get the number of bone weights per vertex
+			var bonesPerVertex = mesh.GetBonesPerVertex();
+
+			if (bonesPerVertex.Length == 0) { 
+				return;
+			}
+
+			// Get all the bone weights, in vertex index order
+			var boneWeights = mesh.GetAllBoneWeights();
+
+			// Keep track of where we are in the array of BoneWeights, as we iterate over the vertices
+			var boneWeightIndex = 0;
+
+			//In order to define for each bones how many vertices are afected, in this case we only set 1 to all because the mesh only have 4 vertices
+			NativeArray<byte> bonesPerVert = new NativeArray<byte>(bonesPerVertex.Length, Allocator.Persistent);
+			//The bone weights for each vertex must be sorted with the most significant weights first.  Zero weights will be ignored.
+			NativeArray<BoneWeight1> weightsB1 = new NativeArray<BoneWeight1>(boneWeights.Length, Allocator.Persistent);
+
+			// Iterate over the vertices
+			for (var vertIndex = 0; vertIndex < mesh.vertexCount; vertIndex++) { 
+				var numberOfBonesForThisVertex = bonesPerVertex[vertIndex];
+
+				// Debug.Log("Vertex " + vertIndex + " has " + numberOfBonesForThisVertex + " bone influences");
+
+				// For each vertex, iterate over its BoneWeights
+				for (var i = 0; i < numberOfBonesForThisVertex; i++) {
+					var currentBoneWeight = boneWeights[boneWeightIndex];
+
+					if (i > 0) { 
+						// Reorder the weights if the influence is less than the current weight
+						if (boneWeights[boneWeightIndex - 1].weight < currentBoneWeight.weight) {
+							BoneWeight1 boneWeight1 = boneWeights[boneWeightIndex - 1];
+
+							boneWeight1.boneIndex = currentBoneWeight.boneIndex;
+							boneWeight1.weight = currentBoneWeight.weight;
+
+							BoneWeight1 boneWeight2 = boneWeights[boneWeightIndex];
+
+							boneWeight2.boneIndex = boneWeights[boneWeightIndex - 1].boneIndex;
+							boneWeight2.weight = boneWeights[boneWeightIndex - 1].weight;
+
+							weightsB1[boneWeightIndex - 1] = boneWeight1;
+							weightsB1[boneWeightIndex] = boneWeight2;
+
+							currentBoneWeight = weightsB1[boneWeightIndex];
+						}
+					}
+
+					// Cull any influences above 2
+					if (i > 1) {
+						currentBoneWeight.weight = 0f;
+					}
+
+					weightsB1[boneWeightIndex] = currentBoneWeight;
+
+					boneWeightIndex++;
+				}
+
+				bonesPerVert[vertIndex] = numberOfBonesForThisVertex;
+			}
+
+			mesh.SetBoneWeights(bonesPerVert, weightsB1);
+
+			bonesPerVert.Dispose();
+			weightsB1.Dispose();
+		}
+		#endif
 	}
 }

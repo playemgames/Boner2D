@@ -1,7 +1,7 @@
 ﻿﻿/*
 The MIT License (MIT)
 
-Copyright (c) 2015 - 2018 Play-Em & Sir Kurt
+Copyright (c) 2015 - 2021 Play-Em & Sir Kurt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +40,9 @@ namespace Boner2D {
 
 		private float baseSelectDistance = 0.1f;
 		private float changedBaseSelectDistance = 0.1f;
+
+		private float baseScaleSize = 1f;
+		private float changedScaleSize = 1f;
 
 		#region Gizmo Colors
 		private Color ghostSegmentColor = Color.cyan;
@@ -179,6 +182,26 @@ namespace Boner2D {
 			GUILayout.Label("[Right Click + Drag] to Add Edge", EditorStyles.whiteLabel);
 			GUILayout.Label("[Alt + Click] to Mark / Demark Area as Hole", EditorStyles.whiteLabel);
 
+			EditorGUILayout.Separator();
+
+			changedScaleSize = EditorGUILayout.Slider("Scale Mesh Size", baseScaleSize, 0.001f, 10f);
+
+			if (baseScaleSize != changedScaleSize) {
+				baseScaleSize = changedScaleSize;
+
+				EditorUtility.SetDirty(this);
+
+				if (SceneView.currentDrawingSceneView != null) {
+					SceneView.currentDrawingSceneView.Repaint();
+				}
+			}
+
+			if (GUILayout.Button("Scale Mesh")) {
+				ScaleMesh();
+			}
+
+			EditorGUILayout.Separator();
+
 			#endregion
 
 			#region Preview Mode Button
@@ -189,7 +212,9 @@ namespace Boner2D {
 
 				EditorUtility.SetDirty(this);
 
-				SceneView.currentDrawingSceneView.Repaint();
+				if (SceneView.currentDrawingSceneView != null) {
+					SceneView.currentDrawingSceneView.Repaint();
+				}
 			}
 
 			GUI.color = (previewMode) ? Color.green : Color.white;
@@ -356,6 +381,7 @@ namespace Boner2D {
 
 					EditorUtility.SetDirty(this);
 				}
+
 				segmentDefiningDrag = false;
 			}
 			else if (e.type == EventType.MouseMove || e.type == EventType.MouseDrag) {
@@ -459,7 +485,9 @@ namespace Boner2D {
 
 			meshDirty = true;
 
-			SceneView.currentDrawingSceneView.Repaint();
+			if (SceneView.currentDrawingSceneView != null) {
+				SceneView.currentDrawingSceneView.Repaint();
+			}
 
 			EditorUtility.SetDirty(previewObject);
 			#endif
@@ -843,6 +871,22 @@ namespace Boner2D {
 			}
 
 			return false;
+		}
+
+		private void ScaleMesh() {
+			if (verts != null && verts.Count > 0) {
+				Undo.RecordObject(this, "Scaled Mesh");
+
+				for (int i = 0; i < verts.Count; i++) {
+					verts[i].position = spriteRenderer.transform.TransformPoint(spriteRenderer.transform.InverseTransformPoint(verts[i].position) * baseScaleSize);
+				}
+
+				EditorUtility.SetDirty(this);
+
+				if (SceneView.currentDrawingSceneView != null) {
+					SceneView.currentDrawingSceneView.Repaint();
+				}
+			}
 		}
 
 		[System.Serializable]

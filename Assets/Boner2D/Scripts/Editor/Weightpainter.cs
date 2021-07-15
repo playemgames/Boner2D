@@ -1,7 +1,7 @@
 ﻿/*
 The MIT License (MIT)
 
-Copyright (c) 2013 - 2018 Banbury & Play-Em
+Copyright (c) 2013 - 2021 Banbury & Play-Em
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,9 @@ THE SOFTWARE.
 */
 using UnityEngine;
 using UnityEditor;
+#if UNITY_2019_1_OR_NEWER
+using Unity.Collections;
+#endif
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -266,6 +269,11 @@ namespace Boner2D {
 						}
 
 						skin.sharedMesh.boneWeights = weights.ToArray();
+
+						#if UNITY_2019_1_OR_NEWER
+						// Force vertices to only have 2 bone influences and use new BoneWeight1 since SkinQuality is ignored in builds
+						skin.sharedMesh.ConvertToBoneWeight1();
+						#endif
 					}
 				}
 
@@ -284,10 +292,33 @@ namespace Boner2D {
 				colors[i] = Color.black;
 			}
 
-			if (bones.Any(b => b.gameObject.GetInstanceID() == bone.gameObject.GetInstanceID())) {
-				for (int i = 0; i < colors.Length; i++) {
+			if (bones.Any(b => b.gameObject.GetInstanceID() == bone.gameObject.GetInstanceID())) { 
+
+				#if UNITY_2019_1_OR_NEWER
+				// Get all the bone weights, in vertex index order
+				var boneWeights = mesh.GetAllBoneWeights();
+
+				// Keep track of where we are in the array of BoneWeights, as we iterate over the vertices
+				var boneWeightIndex = 0;
+
+				var bonesPerVertex = mesh.GetBonesPerVertex();
+				#endif
+
+				for (int i = 0; i < colors.Length; i++) { 
 					value = 0;
 
+					#if UNITY_2019_1_OR_NEWER
+					var numberOfBonesForThisVertex = bonesPerVertex[i];
+
+					// For each vertex, iterate over its BoneWeights
+					for (var v = 0; v < numberOfBonesForThisVertex; v++) { 
+						if (boneWeights[boneWeightIndex].boneIndex == boneIndex) {
+							value = boneWeights[boneWeightIndex].weight;
+						}
+
+						boneWeightIndex++;
+					}
+					#else
 					if (mesh.boneWeights[i].boneIndex0 == boneIndex) {
 						value = mesh.boneWeights[i].weight0;
 					}
@@ -300,6 +331,7 @@ namespace Boner2D {
 					else if (mesh.boneWeights[i].boneIndex3 == boneIndex) {
 						value = mesh.boneWeights[i].weight3;
 					}
+					#endif
 
 					Util.HSBColor hsbColor = new Util.HSBColor(0.7f - value, 1.0f, 0.5f);
 					hsbColor.a = colorTransparency;

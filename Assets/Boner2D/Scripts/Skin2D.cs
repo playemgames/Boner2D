@@ -1,7 +1,7 @@
 ﻿/*
 The MIT License (MIT)
 
-Copyright (c) 2014 - 2018 Banbury & Play-Em
+Copyright (c) 2014 - 2021 Banbury & Play-Em
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,9 @@ using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 using System.IO;
+#endif
+#if UNITY_2019_1_OR_NEWER
+using Unity.Collections;
 #endif
 using System.Collections;
 using System.Collections.Generic;
@@ -182,8 +185,11 @@ namespace Boner2D {
 						AssetDatabase.CreateFolder("Assets", "Materials");
 						AssetDatabase.Refresh();
 					}
+
 					AssetDatabase.CreateAsset(spriteMaterial, "Assets/Materials/" + spriteMaterial.mainTexture.name + ".mat");
+
 					Debug.Log("Created material " + spriteMaterial.mainTexture.name + " for " + skin.gameObject.name);
+
 					skin2D.referenceMaterial = spriteMaterial;
 					skin.sortingLayerName = sortLayerName;
 					skin.sortingOrder = sortOrder;
@@ -194,6 +200,7 @@ namespace Boner2D {
 						skin.sharedMesh = filter.sharedMesh;
 						skin2D.referenceMesh = skin.sharedMesh;
 					}
+
 					// Recalculate the bone weights for the new mesh
 					skin2D.RecalculateBoneWeights();
 				}
@@ -383,6 +390,11 @@ namespace Boner2D {
 					BoneWeight[] unitweights = boneWeights.GetUnityBoneWeights();
 					mesh.boneWeights = unitweights;
 
+					#if UNITY_2019_1_OR_NEWER
+					// Force vertices to only have 2 bone influences and use new BoneWeight1 since SkinQuality is ignored in builds
+					mesh.ConvertToBoneWeight1();
+					#endif
+
 					Transform[] bonesArr = bones.Select(b => b.transform).ToArray();
 					Matrix4x4[] bindPoses = new Matrix4x4[bonesArr.Length];
 
@@ -456,10 +468,32 @@ namespace Boner2D {
 				Bone bone = go.GetComponent<Bone>();
 
 				if (bone != null) {
-					if (skinnedMeshRenderer.bones.Any(b => b.gameObject.GetInstanceID() == bone.gameObject.GetInstanceID())) {
+					if (skinnedMeshRenderer.bones.Any(b => b.gameObject.GetInstanceID() == bone.gameObject.GetInstanceID())) { 
+						#if UNITY_2019_1_OR_NEWER
+						// Get all the bone weights, in vertex index order
+						var boneWeights = m.GetAllBoneWeights();
+
+						// Keep track of where we are in the array of BoneWeights, as we iterate over the vertices
+						var boneWeightIndex = 0;
+
+						var bonesPerVertex = m.GetBonesPerVertex();
+						#endif
+
 						for (int i = 0; i < colors.Length; i++) {
 							float value = 0;
 
+							#if UNITY_2019_1_OR_NEWER
+							var numberOfBonesForThisVertex = bonesPerVertex[i];
+
+							// For each vertex, iterate over its BoneWeights
+							for (var v = 0; v < numberOfBonesForThisVertex; v++) { 
+								if (boneWeights[boneWeightIndex].boneIndex == bone.index) {
+									value = boneWeights[boneWeightIndex].weight;
+								}
+
+								boneWeightIndex++;
+							}
+							#else
 							BoneWeight bw = m.boneWeights[i];
 							if (bw.boneIndex0 == bone.index)
 								value = bw.weight0;
@@ -469,6 +503,7 @@ namespace Boner2D {
 								value = bw.weight2;
 							else if (bw.boneIndex3 == bone.index)
 								value = bw.weight3;
+							#endif
 
 							colors[i] = Util.HSBColor.ToColor(new Util.HSBColor(0.7f - value, 1.0f, 0.5f));
 						}
