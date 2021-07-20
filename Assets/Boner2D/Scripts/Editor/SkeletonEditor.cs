@@ -214,6 +214,25 @@ namespace Boner2D {
 
 			EditorGUILayout.Separator();
 
+			EditorGUILayout.LabelField("Convert all Bone Weights to BoneWeight1", EditorStyles.boldLabel);
+
+			if (GUILayout.Button("Convert Bone Weights")) {
+				skins = skeleton.gameObject.GetComponentsInChildren<Skin2D>(true);
+
+				foreach (Skin2D skin in skins) {
+					bool skinActive = skin.gameObject.activeSelf;
+					skin.gameObject.SetActive(true);
+					skin.lockBoneWeights = false;
+					skin.skinnedMeshRenderer.sharedMesh.ConvertToBoneWeight1();
+					skin.lockBoneWeights = true;
+					skin.gameObject.SetActive(skinActive);
+				}
+
+				Debug.Log("Converted Bone Weights.");
+			}
+
+			EditorGUILayout.Separator();
+
 			EditorGUILayout.LabelField("Reset Skins' Control Points", EditorStyles.boldLabel);
 
 			if (GUILayout.Button("Reset Control Points")) {
