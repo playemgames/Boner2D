@@ -104,7 +104,10 @@ namespace Boner2D {
 		static public bool showMeshOutline = false;
 
 		// Vertices of the Skin2D
-		private List<Vector3> vertices = new List<Vector3>();
+		private NativeArray<Vector3> vertices;
+
+		// Current Control Point we are comparing
+		private Vector3 currentControlPoint;
 
 		// Reference to the original mesh for the skinned mesh renderer
 		public Mesh referenceMesh;
@@ -658,25 +661,31 @@ namespace Boner2D {
 		public void UpdateControlPoints() {
 			count = controlPoints.Length;
 
-			if (vertices == null || vertices.Count != _skinnedMeshRenderer.sharedMesh.vertexCount) {
-				vertices.Clear();
-				_skinnedMeshRenderer.sharedMesh.GetVertices(vertices);
-			}
-			else {
-				_skinnedMeshRenderer.sharedMesh.GetVertices(vertices);
+			if (vertices == null || vertices.Length != _skinnedMeshRenderer.sharedMesh.vertexCount) { 
+				#if UNITY_2020_1_OR_NEWER
+				using (var dataArray = Mesh.AcquireReadOnlyMeshData(_skinnedMeshRenderer.sharedMesh)) { 
+					var data = dataArray[0];
+
+					vertices = new NativeArray<Vector3>(skinnedMeshRenderer.sharedMesh.vertexCount, Allocator.Persistent);
+
+					data.GetVertices(vertices);
+				}
+				#else
+				vertices = new NativeArray<Vector3>(skinnedMeshRenderer.sharedMesh.vertices, Allocator.Persistent);
+				#endif
 			}
 
 			updateControlPoints = false;
 
 			for (c = 0; c < count; c++) {
-				if (!updateControlPoints) {
-					if (vertices[c] != points.GetPoint(controlPoints[c])) {
-						updateControlPoints = true;
-					}
-				}
+				currentControlPoint = points.GetPoint(controlPoints[c]);
 
-				if (updateControlPoints) {
-					vertices[c] = points.GetPoint(controlPoints[c]);
+				if (vertices[c].x != currentControlPoint.x
+				|| vertices[c].y != currentControlPoint.y
+				|| vertices[c].z != currentControlPoint.z) {
+					updateControlPoints = true;
+
+					vertices[c] = currentControlPoint;
 				}
 			}
 
@@ -689,6 +698,18 @@ namespace Boner2D {
 			// Only skin up to 2 bones, more than this messes up the skinning.
 			if (skinnedMeshRenderer != null) {
 				skinnedMeshRenderer.quality = SkinQuality.Bone2;
+
+				#if UNITY_2020_1_OR_NEWER
+				using (var dataArray = Mesh.AcquireReadOnlyMeshData(_skinnedMeshRenderer.sharedMesh)) { 
+					var data = dataArray[0];
+
+					vertices = new NativeArray<Vector3>(_skinnedMeshRenderer.sharedMesh.vertexCount, Allocator.Persistent);
+
+					data.GetVertices(vertices);
+				}
+				#else
+				vertices = new NativeArray<Vector3>(_skinnedMeshRenderer.sharedMesh.vertices, Allocator.Persistent);
+				#endif
 			}
 		}
 
@@ -804,6 +825,10 @@ namespace Boner2D {
 			#endif
 
 			_editingPoints = false;
+
+			if (vertices != null) {
+				vertices.Dispose();
+			}
 		}
 	}
 }
