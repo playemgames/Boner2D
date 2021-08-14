@@ -666,11 +666,19 @@ namespace Boner2D {
 				using (var dataArray = Mesh.AcquireReadOnlyMeshData(_skinnedMeshRenderer.sharedMesh)) { 
 					var data = dataArray[0];
 
+					if (vertices != null && vertices.IsCreated) {
+						vertices.Dispose();
+					}
+
 					vertices = new NativeArray<Vector3>(skinnedMeshRenderer.sharedMesh.vertexCount, Allocator.Persistent);
 
 					data.GetVertices(vertices);
 				}
 				#else
+				if (vertices != null && vertices.IsCreated) {
+					vertices.Dispose();
+				}
+
 				vertices = new NativeArray<Vector3>(skinnedMeshRenderer.sharedMesh.vertices, Allocator.Persistent);
 				#endif
 			}

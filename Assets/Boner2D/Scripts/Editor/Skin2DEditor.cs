@@ -1,7 +1,7 @@
 ﻿/*
 The MIT License (MIT)
 
-Copyright (c) 2014 - 2018 Banbury & Play-Em
+Copyright (c) 2014 - 2021 Banbury & Play-Em
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,9 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 #endif
+#if UNITY_2019_1_OR_NEWER
+using Unity.Collections;
+#endif
 using System.Collections;
 using System.Collections.Generic;
 
@@ -44,8 +47,8 @@ namespace Boner2D {
 
 		// Used for drawing control points
 		private Mesh bakeMesh;
-		private List<Vector3> vertices = new List<Vector3>();
-		private List<Vector3> newVertices = new List<Vector3>();
+		private NativeArray<Vector3> vertices;
+		private NativeArray<Vector3> newVertices;
 
 		private Matrix4x4[] boneMatrices;
 		private BoneWeight[] weights;
@@ -57,6 +60,7 @@ namespace Boner2D {
 		private BoneWeight weight;
 		private Vector3 newVert;
 		private Vector3 offset;
+		private Vector3 currentControlPoint;
 
 		private Event e;
 
@@ -69,6 +73,16 @@ namespace Boner2D {
 			skin = (Skin2D)target;
 			skinnedMeshRenderer = skin.GetComponent<SkinnedMeshRenderer>();
 			skinnedMesh = skinnedMeshRenderer.sharedMesh;
+		}
+
+		void OnDisable() {
+			if (vertices != null && vertices.IsCreated) { 
+				vertices.Dispose();
+			}
+
+			if (newVertices != null && newVertices.IsCreated) { 
+				newVertices.Dispose();
+			}
 		}
 
 		public override void OnInspectorGUI() {
@@ -200,13 +214,38 @@ namespace Boner2D {
 				// Create the vertices here for the handle points
 				if (!skin.editingPoints) {
 					bakeMesh = new Mesh();
-					skinnedMeshRenderer.BakeMesh(bakeMesh);
 
-					// Always clear vertices before getting new ones
-					vertices.Clear();
-					bakeMesh.GetVertices(vertices);
+					#if UNITY_2020_2_OR_NEWER
+					skinnedMeshRenderer.BakeMesh(bakeMesh, true);
+					#else
+					skinnedMeshRenderer.BakeMesh(bakeMesh);
+					#endif
 
 					skinnedMesh = skinnedMeshRenderer.sharedMesh;
+
+					// Always clear vertices before getting new ones
+
+					#if UNITY_2020_1_OR_NEWER
+					using (var dataArray = Mesh.AcquireReadOnlyMeshData(bakeMesh)) { 
+						var data = dataArray[0];
+
+						if (vertices == null || vertices != null && vertices.Length != bakeMesh.vertexCount) { 
+							if (vertices.IsCreated) {
+								vertices.Dispose();
+							}
+
+							vertices = new NativeArray<Vector3>(bakeMesh.vertexCount, Allocator.Persistent);
+						}
+
+						data.GetVertices(vertices);
+					}
+					#else
+					if (vertices != null && vertices.IsCreated) {
+						vertices.Dispose();
+					}
+
+					vertices = new NativeArray<Vector3>(bakeMesh.vertices, Allocator.Persistent);
+					#endif
 
 					boneMatrices = new Matrix4x4[skinnedMeshRenderer.bones.Length];
 					weights = skinnedMesh.boneWeights;
@@ -215,13 +254,35 @@ namespace Boner2D {
 
 					// First apply the scale, then transform it to World Space
 					for (int i = 0; i < bakeMesh.vertexCount; i++) {
+						#if !UNITY_2020_2_OR_NEWER
 						vertices[i] = Vector3.Scale(bakeMesh.vertices[i], skinnedMeshRenderer.transform.lossyScale);
+						#endif
 						vertices[i] = skinnedMeshRenderer.transform.TransformPoint(vertices[i]);
 					}
 
 					// Always clear vertices before getting new ones
-					newVertices.Clear();
-					skinnedMeshRenderer.sharedMesh.GetVertices(newVertices);
+
+					#if UNITY_2020_1_OR_NEWER
+					using (var dataArray = Mesh.AcquireReadOnlyMeshData(skinnedMesh)) { 
+						var data = dataArray[0];
+
+						if (newVertices == null || newVertices != null && newVertices.Length != skinnedMesh.vertexCount) { 
+							if (newVertices.IsCreated) {
+								newVertices.Dispose();
+							}
+
+							newVertices = new NativeArray<Vector3>(skinnedMesh.vertexCount, Allocator.Persistent);
+						}
+
+						data.GetVertices(newVertices);
+					}
+					#else
+					if (newVertices != null && newVertices.IsCreated) {
+						newVertices.Dispose();
+					}
+
+					newVertices = new NativeArray<Vector3>(skinnedMesh.vertices, Allocator.Persistent);
+					#endif
 
 					// Debug.Log("Created new baked mesh.");
 				}
@@ -233,7 +294,7 @@ namespace Boner2D {
 
 					skin.editingPoints = true;
 				}
-				else if (e.type == EventType.MouseUp || vertices.Count != skinnedMeshRenderer.sharedMesh.vertexCount) {
+				else if (e.type == EventType.MouseUp || vertices.Length != skinnedMeshRenderer.sharedMesh.vertexCount) {
 					skin.editingPoints = false;
 
 					// Debug.Log("Stopped editing points");
@@ -291,6 +352,7 @@ namespace Boner2D {
 
 							skin.controlPoints[i].position = newVert;
 							skin.points.SetPoint(skin.controlPoints[i]);
+
 							newVertices[i] = skin.points.GetPoint(skin.controlPoints[i]);
 
 							if (EditorGUI.EndChangeCheck()) {
@@ -301,10 +363,12 @@ namespace Boner2D {
 							}
 						}
 						else {
-							// If we are not editing points then just use the world space offset for the position handle
-							offset = vertices[i] - skin.transform.TransformPoint(skin.points.GetPoint(skin.controlPoints[i]));
+							currentControlPoint = skin.points.GetPoint(skin.controlPoints[i]);
 
-							vertices[i] = Handles.PositionHandle(skin.transform.TransformPoint(skin.points.GetPoint(skin.controlPoints[i])) + offset, Quaternion.identity);
+							// If we are not editing points then just use the world space offset for the position handle
+							offset = vertices[i] - skin.transform.TransformPoint(currentControlPoint);
+
+							vertices[i] = Handles.PositionHandle(skin.transform.TransformPoint(currentControlPoint) + offset, Quaternion.identity);
 
 							// Debug.Log("Not editing points.");
 						}
